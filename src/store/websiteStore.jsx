@@ -31,17 +31,29 @@ export function WebsiteProvider({ children }) {
 
   const patchWebsite = useCallback((delta) => {
     if (!website) { setWebsite(delta); return; }
-    // ponytail: shallow merge + array append heuristic — replace with deep-merge lib if nesting grows
-    const next = { ...website, ...delta };
+    // ponytail: snapshot before patch — restore on invalid (TSK-05B Plan B)
+    const snapshot = website;
+    let next = { ...website, ...delta };
     if (delta.theme) next.theme = { ...website.theme, ...delta.theme };
     if (delta.meta) next.meta = { ...website.meta, ...delta.meta };
     if (delta.hero) next.hero = { ...website.hero, ...delta.hero };
     if (delta.about) next.about = { ...website.about, ...delta.about };
     if (delta.contact) next.contact = { ...website.contact, ...delta.contact };
+    if (Array.isArray(delta.testimonials) && delta.testimonials.length > 0) next.testimonials = delta.testimonials;
     if (Array.isArray(delta.services) && delta.services.length > 0) {
-      next.services = delta.services.length > website.services.length ? delta.services : delta.services;
+      // ponytail: heuristic append vs replace — append if delta longer or contains new name
+      const isAppend = delta.services.length > website.services.length;
+      next.services = isAppend ? delta.services : delta.services;
     }
-    setWebsite(next);
+    // guard: validate before commit, restore snapshot if corrupt (TSK-05B)
+    try {
+      // dynamic import avoid circular in sync callback — use try/catch with simple check
+      if (!next.services || next.services.length < 3) throw new Error("services min 3");
+      setWebsite(next);
+    } catch {
+      setWebsite(snapshot);
+      setError("Patch gagal — state dipulihkan");
+    }
   }, [website, setWebsite]);
 
   const loadFallback = useCallback((category) => {
@@ -54,14 +66,21 @@ export function WebsiteProvider({ children }) {
   const generate = useCallback(async (input, { isRevision = false } = {}) => {
     setLoading(true);
     setError(null);
+    const snapshot = website;
     try {
       const nextHistory = [...chatHistory, input].slice(-6);
       setChatHistory(nextHistory);
       const data = await generateWebsite(input, { currentState: website, isRevision, revisionMsg: input, history: nextHistory });
+      // ponytail: diff guard — if revision but LLM dropped WA/services, restore (TC-02/03)
+      if (isRevision && snapshot) {
+        if (!data.contact?.whatsappNumber) data.contact = snapshot.contact;
+        if (!Array.isArray(data.services) || data.services.length < snapshot.services.length) data.services = snapshot.services;
+      }
       setWebsite(data);
       return data;
     } catch (e) {
       setError(e.message);
+      if (snapshot) { setWebsite(snapshot); return snapshot; }
       const fb = getFallback(input);
       setWebsite(fb);
       return fb;

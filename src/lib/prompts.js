@@ -21,7 +21,14 @@ export function buildInitialPrompt(userInput, history = []) {
 export function buildRevisionPrompt(oldJson, userMsg, history = []) {
   const h = trimHistory(history, 3);
   const histBlock = h.length ? `\nRiwayat chat:\n${h.map((x) => `- ${String(x).slice(0, 200)}`).join("\n")}\n` : "";
-  return `${SYSTEM_PROMPT_V1}\n\nState website saat ini:\n${JSON.stringify(oldJson).slice(0, 3500)}${histBlock}\nRevisi diminta: """${userMsg.slice(0, 500)}"""\nAturan revisi: Ubah HANYA field yang diminta. Jangan hapus section lain. Jika minta warna → ubah theme.primaryColor/accentColor saja. Jika minta tambah menu → append ke services[].\nBalas JSON lengkap yang sudah direvisi.`;
+  // ponytail: few-shot for TC-02/03 — keep short, remove if token budget tight
+  const rules = `Aturan revisi (diff, bukan regenerate):
+- HANYA ubah field yang disebut. JANGAN hapus/acak section lain.
+- Jika kata "warna/tema/nuansa" → ubah theme.primaryColor & accentColor saja (#RRGGBB), lainnya identik.
+- Jika kata "headline/judul" → ubah hero.title saja.
+- Jika kata "tambah/menu/produk" → append 1 item ke services[] (jangan replace array).
+Contoh: "Ganti warna cokelat tua" → primaryColor "#78350f". "Tambah menu Pisang Goreng Keju 15 ribu" → services +{name:"Pisang Goreng Keju",description:"Pisang goreng... ",priceEstimate:"15 ribu"}.`;
+  return `${SYSTEM_PROMPT_V1}\n\nState website saat ini:\n${JSON.stringify(oldJson).slice(0, 3500)}${histBlock}\nRevisi diminta: """${userMsg.slice(0, 500)}"""\n${rules}\nBalas JSON lengkap yang sudah direvisi.`;
 }
 
 export function trimHistory(history, max = 3) {
