@@ -12,12 +12,16 @@ ATUURAN KETAT:
 - hero.ctaWhatsappMessage pesan custom untuk link wa.me
 Skema: {templateId, theme{primaryColor, accentColor, fontFamily}, meta{businessName, category, tagline}, hero{title, subtitle, ctaText, ctaWhatsappMessage}, about{story, highlights}, services[], testimonials[], contact{whatsappNumber, address, instagram}}`;
 
-export function buildInitialPrompt(userInput) {
-  return `${SYSTEM_PROMPT_V1}\n\nInput user: """${userInput.slice(0, 1000)}"""\n\nBalas JSON saja.`;
+export function buildInitialPrompt(userInput, history = []) {
+  const h = trimHistory(history, 3);
+  const histBlock = h.length ? `\nRiwayat chat (3 turn terakhir):\n${h.map((x) => `- ${String(x).slice(0, 200)}`).join("\n")}\n` : "";
+  return `${SYSTEM_PROMPT_V1}${histBlock}\nInput user: """${userInput.slice(0, 1000)}"""\n\nBalas JSON saja.`;
 }
 
-export function buildRevisionPrompt(oldJson, userMsg) {
-  return `${SYSTEM_PROMPT_V1}\n\nState website saat ini:\n${JSON.stringify(oldJson).slice(0, 3500)}\n\nRevisi diminta: """${userMsg.slice(0, 500)}"""\nAturan revisi: Ubah HANYA field yang diminta. Jangan hapus section lain. Jika minta warna → ubah theme.primaryColor/accentColor saja. Jika minta tambah menu → append ke services[].\nBalas JSON lengkap yang sudah direvisi.`;
+export function buildRevisionPrompt(oldJson, userMsg, history = []) {
+  const h = trimHistory(history, 3);
+  const histBlock = h.length ? `\nRiwayat chat:\n${h.map((x) => `- ${String(x).slice(0, 200)}`).join("\n")}\n` : "";
+  return `${SYSTEM_PROMPT_V1}\n\nState website saat ini:\n${JSON.stringify(oldJson).slice(0, 3500)}${histBlock}\nRevisi diminta: """${userMsg.slice(0, 500)}"""\nAturan revisi: Ubah HANYA field yang diminta. Jangan hapus section lain. Jika minta warna → ubah theme.primaryColor/accentColor saja. Jika minta tambah menu → append ke services[].\nBalas JSON lengkap yang sudah direvisi.`;
 }
 
 export function trimHistory(history, max = 3) {

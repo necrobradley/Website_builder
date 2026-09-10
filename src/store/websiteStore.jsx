@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { generateWebsite } from "../lib/gemini.js";
 import { getFallback } from "../lib/schema.js";
 
 const WebsiteContext = createContext(null);
@@ -12,6 +13,8 @@ export function WebsiteProvider({ children }) {
     } catch { return null; }
   });
   const [history, setHistory] = useState([]);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -47,6 +50,26 @@ export function WebsiteProvider({ children }) {
     return fb;
   }, [setWebsite]);
 
+  // ponytail: orchestration in store — no separate backend, keeps API+state in one place
+  const generate = useCallback(async (input, { isRevision = false } = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const nextHistory = [...chatHistory, input].slice(-6);
+      setChatHistory(nextHistory);
+      const data = await generateWebsite(input, { currentState: website, isRevision, revisionMsg: input, history: nextHistory });
+      setWebsite(data);
+      return data;
+    } catch (e) {
+      setError(e.message);
+      const fb = getFallback(input);
+      setWebsite(fb);
+      return fb;
+    } finally {
+      setLoading(false);
+    }
+  }, [website, chatHistory, setWebsite]);
+
   const clear = useCallback(() => {
     setWebsiteState(null);
     setHistory([]);
@@ -54,7 +77,7 @@ export function WebsiteProvider({ children }) {
   }, []);
 
   return (
-    <WebsiteContext.Provider value={{ website, history, error, setError, setWebsite, patchWebsite, loadFallback, clear }}>
+    <WebsiteContext.Provider value={{ website, history, chatHistory, loading, error, setError, setWebsite, patchWebsite, loadFallback, clear, generate }}>
       {children}
     </WebsiteContext.Provider>
   );

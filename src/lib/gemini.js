@@ -48,8 +48,8 @@ async function callGemini(prompt) {
 }
 
 export async function generateWebsite(userInput, opts = {}) {
-  const { currentState = null, isRevision = false, revisionMsg = "" } = opts;
-  const prompt = isRevision ? buildRevisionPrompt(currentState, revisionMsg || userInput) : buildInitialPrompt(userInput);
+  const { currentState = null, isRevision = false, revisionMsg = "", history = [] } = opts;
+  const prompt = isRevision ? buildRevisionPrompt(currentState, revisionMsg || userInput, history) : buildInitialPrompt(userInput, history);
   const category = currentState?.meta?.category || userInput;
 
   try {
