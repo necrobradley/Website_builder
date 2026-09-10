@@ -6,14 +6,32 @@ function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").re
 
 export function buildHtml(website) {
   const wa = buildWaLink(website.contact.whatsappNumber, website.hero.ctaWhatsappMessage);
-  const services = website.services.map(s => `<div style="border:1px solid #e2e8f0;padding:16px;border-radius:12px"><h3>${esc(s.name)}</h3><p>${esc(s.description)}</p><p><b>${esc(s.priceEstimate)}</b></p></div>`).join("");
-  const testimonials = (website.testimonials||[]).map(t => `<blockquote style="border-left:4px solid ${website.theme.primaryColor};padding:8px 12px"><p>${esc(t.review)}</p><cite>${esc(t.customerName)}</cite></blockquote>`).join("");
-  return `<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(website.meta.businessName)} — ${esc(website.meta.tagline)}</title><script src="https://cdn.tailwindcss.com"><\/script></head><body class="font-sans text-slate-800">
-<header style="background:${website.theme.primaryColor};color:white;padding:48px 24px;text-align:center"><h1 style="font-size:2.5rem;font-weight:800">${esc(website.hero.title)}</h1><p style="margin:12px 0;font-size:1.2rem">${esc(website.hero.subtitle)}</p><a href="${wa}" target="_blank" style="display:inline-block;background:white;color:${website.theme.primaryColor};padding:12px 24px;border-radius:9999px;font-weight:700;text-decoration:none">${esc(website.hero.ctaText)}</a></header>
-<section style="max-width:800px;margin:0 auto;padding:32px 24px"><h2>Tentang Kami</h2><p>${esc(website.about.story)}</p></section>
-<section style="max-width:1000px;margin:0 auto;padding:32px 24px"><h2>Layanan</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">${services}</div></section>
-<section style="max-width:800px;margin:0 auto;padding:32px 24px"><h2>Testimoni</h2><div style="display:grid;gap:12px">${testimonials}</div></section>
-<footer style="background:#0f172a;color:white;text-align:center;padding:24px"><p>${esc(website.contact.address)}</p><p><a href="${wa}" style="color:#25d366">WhatsApp: ${esc(website.contact.whatsappNumber)}</a> ${website.contact.instagram?`· ${esc(website.contact.instagram)}`:""}</p></footer>
+  const services = website.services.map(s => `<div class="border p-4 rounded-xl bg-white shadow-sm"><h3 class="font-bold">${esc(s.name)}</h3><p class="text-sm text-slate-600">${esc(s.description)}</p><p class="font-semibold mt-2">${esc(s.priceEstimate)}</p></div>`).join("");
+  const testimonials = (website.testimonials||[]).map(t => `<blockquote class="border-l-4 pl-3 py-2" style="border-color:${website.theme.primaryColor}"><p class="italic">"${esc(t.review)}"</p><cite class="text-sm font-semibold">— ${esc(t.customerName)}</cite></blockquote>`).join("");
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(website.meta.businessName)} — ${esc(website.meta.tagline)}</title><script src="https://cdn.tailwindcss.com"><\/script></head><body class="font-sans text-slate-800 scroll-smooth">
+<nav class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b flex items-center justify-between px-4 py-3">
+  <span class="font-extrabold" style="color:${website.theme.primaryColor}">${esc(website.meta.businessName)}</span>
+  <button id="nav-toggle" aria-label="Menu" class="sm:hidden p-2 border rounded-lg">☰</button>
+  <div id="nav" class="hidden sm:flex gap-4 text-sm"><a href="#about" class="hover:underline">Tentang</a><a href="#services" class="hover:underline">Layanan</a><a href="#contact" class="hover:underline">Kontak</a><a href="${wa}" target="_blank" class="bg-green-500 text-white px-3 py-1 rounded-full">WA</a></div>
+</nav>
+<div id="nav-mobile" class="hidden sm:hidden border-b px-4 py-2 flex-col gap-2 text-sm bg-white"><a href="#about">Tentang</a><a href="#services">Layanan</a><a href="#contact">Kontak</a><a href="${wa}" target="_blank" class="text-green-600 font-semibold">Chat WhatsApp</a></div>
+<header class="text-center py-16 px-6 text-white" style="background:${website.theme.primaryColor}"><h1 class="text-4xl font-extrabold">${esc(website.hero.title)}</h1><p class="mt-3 text-lg opacity-90">${esc(website.hero.subtitle)}</p><a href="${wa}" target="_blank" class="inline-block mt-6 bg-white px-6 py-3 rounded-full font-bold" style="color:${website.theme.primaryColor}">${esc(website.hero.ctaText)}</a></header>
+<section id="about" class="max-w-3xl mx-auto px-6 py-12"><h2 class="text-2xl font-bold">Tentang Kami</h2><p class="mt-3 leading-relaxed">${esc(website.about.story)}</p></section>
+<section id="services" class="max-w-5xl mx-auto px-6 py-12"><h2 class="text-2xl font-bold">Layanan</h2><div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">${services}</div></section>
+<section class="max-w-3xl mx-auto px-6 py-12"><h2 class="text-2xl font-bold">Testimoni</h2><div class="mt-6 grid gap-4">${testimonials}</div></section>
+<footer id="contact" class="bg-slate-900 text-white text-center py-8 px-6"><p>${esc(website.contact.address)}</p><p class="mt-2"><a href="${wa}" class="text-green-400 font-semibold">WhatsApp: ${esc(website.contact.whatsappNumber)}</a> ${website.contact.instagram?`· ${esc(website.contact.instagram)}`:""}</p></footer>
+<a href="${wa}" target="_blank" aria-label="Chat WA" class="fixed bottom-4 right-4 bg-green-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg text-2xl">✉</a>
+<script>
+// ponytail: vanilla only — ~25 lines, no framework. Split if >50 lines.
+const t=document.getElementById('nav-toggle'),m=document.getElementById('nav-mobile');
+if(t&&m) t.onclick=()=>m.classList.toggle('hidden');
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    const id=a.getAttribute('href');
+    if(id.length>1){ const el=document.querySelector(id); if(el){ e.preventDefault(); el.scrollIntoView({behavior:'smooth'}); if(m) m.classList.add('hidden'); }}
+  });
+});
+</script>
 </body></html>`;
 }
 
