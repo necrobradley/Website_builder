@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import WebsiteRenderer from './components/WebsiteRenderer'
 import { mockDataByTemplate } from './data/mockWebsiteData'
+import { useWebsite } from './store/websiteStore.jsx'
 
 const TEMPLATES = [
   { id: 'template-services', label: '🏢 Services', desc: 'Professional & Clean' },
@@ -27,12 +28,24 @@ const VIEWPORTS = [
 export default function App() {
   const [activeTemplate, setActiveTemplate] = useState('template-fnb')
   const [activeViewport, setActiveViewport] = useState('desktop')
-
-  const currentData = mockDataByTemplate[activeTemplate]
+  // ponytail: E2E wiring for TSK-04A — no extra page, reuse same preview
+  const { website, generate, loading } = useWebsite()
+  const [e2eInput, setE2eInput] = useState('Warung Kopi Sejahtera, jual kopi tubruk dan roti bakar di Surabaya, target anak muda nugas, wa 08123456789')
+  const isE2EActive = !!website
+  const currentData = isE2EActive ? website : mockDataByTemplate[activeTemplate]
+  const effectiveTemplate = isE2EActive ? website.templateId : activeTemplate
   const currentViewport = VIEWPORTS.find((v) => v.id === activeViewport)
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
+      {/* E2E bar — TSK-04A (Dev 1A/1B) — ponytail: 1 bar, no separate chat page yet */}
+      <div className="bg-white border-b px-3 py-2 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+        <input value={e2eInput} onChange={(e) => setE2eInput(e.target.value)} placeholder="Deskripsi bisnis..." className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <button onClick={() => generate(e2eInput)} disabled={loading || !e2eInput.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-blue-700 shrink-0">
+          {loading ? 'Generating...' : 'Generate (E2E)'}
+        </button>
+        {isE2EActive && <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full self-center">E2E aktif: {website.meta?.businessName} — {effectiveTemplate}</span>}
+      </div>
       {/* Dev toolbar */}
       <div className="bg-slate-900 text-white px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 shrink-0">
         {/* Brand */}
@@ -97,13 +110,13 @@ export default function App() {
           }}
         >
           {/* Website renderer — same API Dev 2A will use */}
-          <div className={activeViewport === 'mobile' ? 'overflow-y-auto max-h-[85vh]' : ''}>
-            <WebsiteRenderer
-              templateId={activeTemplate}
-              data={currentData}
-              theme={activeTemplate.replace('template-', '')}
-            />
-          </div>
+           <div className={activeViewport === 'mobile' ? 'overflow-y-auto max-h-[85vh]' : ''}>
+             <WebsiteRenderer
+               templateId={effectiveTemplate}
+               data={currentData}
+               theme={effectiveTemplate.replace('template-', '')}
+             />
+           </div>
         </div>
       </div>
 
