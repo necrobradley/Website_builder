@@ -38,13 +38,18 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
-      {/* E2E bar — TSK-04A (Dev 1A/1B) — ponytail: 1 bar, no separate chat page yet */}
+      {/* E2E bar — TSK-04A/06A (Dev 1A/1B) — ponytail: 1 bar */}
       <div className="bg-white border-b px-3 py-2 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
         <input value={e2eInput} onChange={(e) => setE2eInput(e.target.value)} placeholder="Deskripsi bisnis..." className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         <button onClick={() => generate(e2eInput)} disabled={loading || !e2eInput.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-blue-700 shrink-0">
-          {loading ? 'Generating...' : 'Generate (E2E)'}
+          {loading ? 'Generating...' : 'Generate'}
         </button>
-        {isE2EActive && <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full self-center">E2E aktif: {website.meta?.businessName} — {effectiveTemplate}</span>}
+        {isE2EActive && (
+          <button onClick={async () => { const { exportZip, downloadBlob } = await import('./lib/export.js'); const blob = await exportZip(website); downloadBlob(blob); }} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 shrink-0">
+            Download ZIP
+          </button>
+        )}
+        {isE2EActive && <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full self-center">E2E: {website.meta?.businessName}</span>}
       </div>
       {/* Dev toolbar */}
       <div className="bg-slate-900 text-white px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 shrink-0">
