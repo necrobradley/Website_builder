@@ -1,0 +1,161 @@
+/**
+ * exportWebsite.js
+ *
+ * Export generator helper for bundling the generated website into a standalone HTML file.
+ */
+import { generateWhatsappUrl } from './templateSelector'
+
+export function exportWebsiteToHtml(data = {}, templateId = 'template-fnb', _currentTheme = 'modern-warm') {
+  const {
+    meta = {},
+    hero = {},
+    about = {},
+    services = [],
+    testimonials = [],
+    contact = {},
+    theme = {},
+  } = data
+
+  const businessName = meta.businessName || 'UMKM Website'
+  const tagline = meta.tagline || ''
+  const category = meta.category || ''
+  const title = hero.title || 'Selamat Datang'
+  const subtitle = hero.subtitle || ''
+  const ctaText = hero.ctaText || 'Pesan via WhatsApp'
+  const waNumber = contact.whatsappNumber || '628123456789'
+  const waUrl = generateWhatsappUrl(waNumber, hero.ctaWhatsappMessage || `Halo, saya ingin pesan di ${businessName}`)
+
+  const primaryColor = theme.primaryColor || (templateId === 'template-fnb' ? '#452821' : templateId === 'template-retail' ? '#6d28d9' : '#1e40af')
+
+  const servicesHtml = services
+    .map(
+      (s) => `
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+        <div>
+          <div class="text-3xl mb-3">${s.icon || '✨'}</div>
+          <h3 class="font-bold text-lg text-slate-900">${s.name}</h3>
+          <p class="text-slate-600 text-sm mt-2 leading-relaxed">${s.description || ''}</p>
+        </div>
+        ${s.priceEstimate ? `<div class="mt-4 pt-3 border-t border-slate-100 font-bold text-sm" style="color:${primaryColor}">${s.priceEstimate}</div>` : ''}
+      </div>`
+    )
+    .join('\n')
+
+  const testimonialsHtml = testimonials
+    .map(
+      (t) => `
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col gap-3">
+        <div class="flex text-amber-400">★★★★★</div>
+        <p class="text-slate-600 italic text-sm leading-relaxed">"${t.text}"</p>
+        <div class="pt-3 border-t border-slate-100 font-semibold text-sm text-slate-800">${t.name}</div>
+      </div>`
+    )
+    .join('\n')
+
+  const htmlContent = `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${businessName} — ${tagline || category || 'Website Resmi'}</title>
+  <meta name="description" content="${subtitle || tagline || businessName}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased selection:bg-amber-100 selection:text-amber-900">
+  <!-- Navbar -->
+  <header class="sticky top-0 z-50 shadow-sm transition-colors" style="background-color: ${primaryColor}">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="font-extrabold text-white text-lg tracking-tight">${businessName}</div>
+      <div class="flex items-center gap-6">
+        <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-white/90">
+          <a href="#hero" class="hover:text-white">Beranda</a>
+          <a href="#services" class="hover:text-white">Katalog</a>
+          <a href="#about" class="hover:text-white">Tentang</a>
+          <a href="#contact" class="hover:text-white">Kontak</a>
+        </nav>
+        <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-[#25d366] hover:bg-[#128c4a] text-white text-sm font-bold px-4 py-2 rounded-full shadow-sm">
+          Pesan via WA
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section id="hero" class="py-20 md:py-32 text-center text-white px-6 relative overflow-hidden" style="background-color: ${primaryColor}">
+    <div class="max-w-4xl mx-auto flex flex-col items-center gap-6 relative z-10">
+      ${tagline ? `<div class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase bg-white/15 backdrop-blur-md border border-white/20 text-white/95">${tagline}</div>` : ''}
+      <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight tracking-tight">${title}</h1>
+      ${subtitle ? `<p class="text-lg md:text-xl text-white/90 max-w-2xl font-normal leading-relaxed">${subtitle}</p>` : ''}
+      <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-[#25d366] hover:bg-[#128c4a] text-white font-bold px-8 py-4 rounded-full text-lg shadow-lg hover:shadow-xl transition-all">
+        ${ctaText}
+      </a>
+    </div>
+  </section>
+
+  <!-- Services / Catalog -->
+  <section id="services" class="py-20 px-6 max-w-6xl mx-auto">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-extrabold text-slate-900">Pilihan Produk & Layanan</h2>
+      <p class="text-slate-500 mt-2">Disediakan khusus untuk memberikan nilai terbaik bagi Anda</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      ${servicesHtml}
+    </div>
+  </section>
+
+  <!-- About -->
+  <section id="about" class="py-20 px-6 bg-white border-y border-slate-100">
+    <div class="max-w-4xl mx-auto text-center space-y-6">
+      <h2 class="text-3xl font-extrabold text-slate-900">Tentang ${businessName}</h2>
+      <p class="text-lg text-slate-600 leading-relaxed">${about.description || ''}</p>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section id="testimonials" class="py-20 px-6 max-w-6xl mx-auto">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-extrabold text-slate-900">Apa Kata Pelanggan Kami</h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      ${testimonialsHtml}
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section id="contact" class="py-20 px-6 text-white" style="background-color: ${primaryColor}">
+    <div class="max-w-4xl mx-auto text-center space-y-6">
+      <h2 class="text-3xl md:text-4xl font-extrabold">Siap Terhubung dengan ${businessName}?</h2>
+      <p class="text-white/80 max-w-xl mx-auto">Hubungi kami langsung via WhatsApp untuk pemesanan cepat dan info lengkap.</p>
+      <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-[#25d366] hover:bg-[#128c4a] text-white font-bold px-8 py-4 rounded-full text-lg shadow-lg">
+        ${ctaText}
+      </a>
+      <div class="pt-8 text-sm text-white/70 space-y-1">
+        ${contact.address ? `<p>📍 ${contact.address}</p>` : ''}
+        ${contact.instagram ? `<p>📸 ${contact.instagram}</p>` : ''}
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-slate-950 text-slate-500 py-8 px-6 text-center text-xs">
+    © ${new Date().getFullYear()} ${businessName}. Website dibuat dengan AI UMKM Website Builder.
+  </footer>
+</body>
+</html>`
+
+  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-website.html`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}

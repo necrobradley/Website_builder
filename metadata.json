@@ -1,0 +1,8 @@
+{
+  "name": "Website Builder",
+  "description": "Interactive website builder and previewer for small businesses with F&B, Services, and Retail templates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
