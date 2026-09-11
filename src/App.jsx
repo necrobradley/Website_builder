@@ -1,116 +1,575 @@
 /**
- * App.jsx — Demo/Development Preview
+ * App.jsx — AI UMKM Website Builder
+ * Dual-Panel Interface with Chat Assistant & Real-time Live Preview
  *
- * Halaman demo untuk Dev 2B testing.
- * Dev 2A akan mengintegrasikan WebsiteRenderer ke dalam sistem mereka sendiri.
- *
- * Fitur:
- * - Tab selector untuk 3 template
- * - Viewport toggle (desktop / mobile) — US-02
- * - Menggunakan mock data dari mockWebsiteData.js
+ * Implements Dev 2B UI Components through Sprint Day 6:
+ * - TSK-01D: Template Slicing Baseline Component
+ * - TSK-02D: Slicing 4 Komponen Template Utama (Hero, About, Services/Products, Contact)
+ * - TSK-03D: Logika Seleksi Template Deterministik (F&B, Services, Retail)
+ * - TSK-04C: Slicing Template Variasi & Kustomisasi (Color Palettes & Typography)
+ * - TSK-05D: Styling Template Responsiveness for Revision (Dynamic mutations via Chat)
  */
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import {
+  Download,
+  Monitor,
+  Smartphone,
+  Send,
+  CheckCircle2,
+  Circle,
+} from 'lucide-react'
+
 import WebsiteRenderer from './components/WebsiteRenderer'
 import { mockDataByTemplate } from './data/mockWebsiteData'
-
-const TEMPLATES = [
-  { id: 'template-services', label: '🏢 Services', desc: 'Professional & Clean' },
-  { id: 'template-fnb',      label: '☕ F&B',       desc: 'Warm & Visual' },
-  { id: 'template-retail',   label: '🛍️ Retail',   desc: 'Bold & Compact' },
-]
-
-const VIEWPORTS = [
-  { id: 'desktop', label: '🖥️ Desktop', width: '100%' },
-  { id: 'mobile',  label: '📱 Mobile',  width: '390px' },
-]
+import {
+  TEMPLATE_FNB,
+  TEMPLATE_SERVICES,
+  TEMPLATE_RETAIL,
+  TEMPLATE_META,
+  determineTemplate,
+} from './lib/templateSelector'
+import { exportWebsiteToHtml } from './lib/exportWebsite'
 
 export default function App() {
-  const [activeTemplate, setActiveTemplate] = useState('template-fnb')
+  // Active template state (Default: F&B as displayed in image.png)
+  const [activeTemplate, setActiveTemplate] = useState(TEMPLATE_FNB)
+  const [activeTheme, setActiveTheme] = useState('modern-warm')
   const [activeViewport, setActiveViewport] = useState('desktop')
 
-  const currentData = mockDataByTemplate[activeTemplate]
-  const currentViewport = VIEWPORTS.find((v) => v.id === activeViewport)
+  // Website data state for each template
+  const [websiteData, setWebsiteData] = useState(() => {
+    // Clone initial mock data to allow real-time mutations
+    return JSON.parse(JSON.stringify(mockDataByTemplate[TEMPLATE_FNB]))
+  })
+
+  // Chat conversation state matching reference design
+  const [messages, setMessages] = useState([
+    {
+      id: 'msg-1',
+      sender: 'assistant',
+      type: 'onboarding',
+      text: 'Halo! 👋 Saya siap membantu membuat website untuk bisnis Anda.',
+      steps: [
+        { label: 'Informasi bisnis dipahami', status: 'done' },
+        { label: 'Template F&B dipilih', status: 'done' },
+        { label: 'Menyusun konten & layout', status: 'in-progress' },
+        { label: 'Menyiapkan preview', status: 'pending' },
+      ],
+    },
+    {
+      id: 'msg-2',
+      sender: 'user',
+      text: 'Ubah warna utama jadi cokelat tua klasik.',
+    },
+    {
+      id: 'msg-3',
+      sender: 'assistant',
+      text: 'Tentu! Warna website telah diperbarui ke tema Modern Warm. Konten tetap aman.',
+    },
+  ])
+
+  const [inputPrompt, setInputPrompt] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const chatBottomRef = useRef(null)
+
+  // Scroll chat to bottom on new messages
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // Handle template selection switch
+  const handleSelectTemplate = (templateId) => {
+    setActiveTemplate(templateId)
+    const defaultTheme = TEMPLATE_META[templateId].defaultTheme
+    setActiveTheme(defaultTheme)
+
+    // Load template-specific data
+    const baseData = JSON.parse(JSON.stringify(mockDataByTemplate[templateId]))
+    const currentThemes = TEMPLATE_META[templateId].themes
+    const themeObj = currentThemes.find((t) => t.id === defaultTheme) || currentThemes[0]
+
+    baseData.theme = {
+      primaryColor: themeObj.primaryColor,
+      secondaryColor: themeObj.secondaryColor,
+      accentColor: themeObj.accentColor,
+    }
+
+    setWebsiteData(baseData)
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `msg-${Date.now()}`,
+        sender: 'assistant',
+        text: `Template berhasil dialihkan ke ${TEMPLATE_META[templateId].name}. Layout dan data konten disesuaikan secara otomatis.`,
+      },
+    ])
+  }
+
+  // Handle theme palette change
+  const handleThemeChange = (themeId) => {
+    setActiveTheme(themeId)
+    const currentThemes = TEMPLATE_META[activeTemplate].themes
+    const themeObj = currentThemes.find((t) => t.id === themeId)
+
+    if (themeObj) {
+      setWebsiteData((prev) => ({
+        ...prev,
+        theme: {
+          ...prev.theme,
+          primaryColor: themeObj.primaryColor,
+          secondaryColor: themeObj.secondaryColor,
+          accentColor: themeObj.accentColor,
+        },
+      }))
+    }
+  }
+
+  // Process revision prompt (TSK-05D / Hari 6)
+  const handleSendPrompt = (promptText) => {
+    const text = (promptText || inputPrompt).trim()
+    if (!text) return
+
+    // Append user message
+    const userMsg = {
+      id: `user-${Date.now()}`,
+      sender: 'user',
+      text,
+    }
+
+    setMessages((prev) => [...prev, userMsg])
+    setInputPrompt('')
+    setIsTyping(true)
+
+    // Simulate AI revision processing
+    setTimeout(() => {
+      const lower = text.toLowerCase()
+      let responseText = ''
+
+      // 1. Check color/theme revision
+      if (lower.includes('cokelat') || lower.includes('klasik') || lower.includes('modern warm')) {
+        handleThemeChange('modern-warm')
+        responseText = 'Tentu! Warna website telah diperbarui ke tema Modern Warm (Cokelat). Konten tetap aman.'
+      } else if (lower.includes('amber') || lower.includes('hangat') || lower.includes('warm amber')) {
+        handleThemeChange('warm-amber')
+        responseText = 'Warna website diperbarui ke tema Warm Amber dengan sentuhan kehangatan madu.'
+      } else if (lower.includes('hijau') || lower.includes('sage') || lower.includes('toska')) {
+        handleThemeChange('forest-sage')
+        responseText = 'Warna website diperbarui ke tema Forest Sage yang segar dan natural.'
+      } else if (lower.includes('biru') || lower.includes('corporate') || lower.includes('navy')) {
+        if (activeTemplate !== TEMPLATE_SERVICES) {
+          handleSelectTemplate(TEMPLATE_SERVICES)
+        }
+        handleThemeChange('corporate-blue')
+        responseText = 'Website dialihkan ke tema Corporate Blue profesional.'
+      } else if (lower.includes('ungu') || lower.includes('violet') || lower.includes('retail')) {
+        if (activeTemplate !== TEMPLATE_RETAIL) {
+          handleSelectTemplate(TEMPLATE_RETAIL)
+        }
+        handleThemeChange('bold-violet')
+        responseText = 'Website dialihkan ke tema Bold Violet untuk produk retail.'
+      }
+      // 2. Check headline revision
+      else if (lower.includes('headline') || lower.includes('judul') || lower.includes('slogan')) {
+        const newTitle = 'Sensasi Kopi Autentik & Ruang Kreatif'
+        const newSubtitle = 'Ruang temu hangat untuk berdiskusi, bekerja santai, dan menikmati racikan biji kopi terbaik Nusantara.'
+        setWebsiteData((prev) => ({
+          ...prev,
+          hero: {
+            ...prev.hero,
+            title: newTitle,
+            subtitle: newSubtitle,
+          },
+        }))
+        responseText = `Headline berhasil diperbarui menjadi "${newTitle}". Susunan kalimat dioptimalkan untuk daya tarik maksimal!`
+      }
+      // 3. Check menu/product addition
+      else if (lower.includes('menu') || lower.includes('tambah') || lower.includes('produk')) {
+        const newItem = {
+          name: 'Pisang Goreng Keju Crispy',
+          description: 'Pisang kepok manis berbalut tepung renyah dengan taburan keju cheddar gurih dan susu kental manis',
+          priceEstimate: 'Rp15.000',
+          icon: '🍌',
+        }
+        setWebsiteData((prev) => {
+          const currentServices = prev.services || []
+          return {
+            ...prev,
+            services: [newItem, ...currentServices],
+          }
+        })
+        responseText = `Menu baru "${newItem.name}" (${newItem.priceEstimate}) berhasil ditambahkan ke daftar katalog menu!`
+      }
+      // 4. Check WhatsApp update
+      else if (lower.includes('wa') || lower.includes('whatsapp') || lower.includes('nomor')) {
+        const newWa = '6281299887766'
+        setWebsiteData((prev) => ({
+          ...prev,
+          contact: {
+            ...prev.contact,
+            whatsappNumber: newWa,
+          },
+        }))
+        responseText = `Nomor WhatsApp CTA berhasil dihubungkan ke +${newWa}. Semua tombol pemesanan siap digunakan!`
+      }
+      // 5. General intelligent revision
+      else {
+        // Detect category if user entered business name
+        const detected = determineTemplate(text)
+        if (detected !== activeTemplate) {
+          handleSelectTemplate(detected)
+          responseText = `Sistem mendeteksi kategori bisnis dan menyesuaikan template ke ${TEMPLATE_META[detected].name}. Semua komponen diperbarui!`
+        } else {
+          // Adjust tagline or general copy
+          setWebsiteData((prev) => ({
+            ...prev,
+            meta: {
+              ...prev.meta,
+              tagline: text.slice(0, 45),
+            },
+          }))
+          responseText = `Permintaan revisi "${text}" telah diterapkan pada konten website secara real-time!`
+        }
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `bot-${Date.now()}`,
+          sender: 'assistant',
+          text: responseText,
+        },
+      ])
+      setIsTyping(false)
+    }, 450)
+  }
+
+  // Handle Export / Download Website
+  const handleDownload = () => {
+    exportWebsiteToHtml(websiteData, activeTemplate, activeTheme)
+  }
+
+  const currentMeta = TEMPLATE_META[activeTemplate]
+  const currentThemes = currentMeta.themes
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col">
-      {/* Dev toolbar */}
-      <div className="bg-slate-900 text-white px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 shrink-0">
-        {/* Brand */}
-        <span className="font-bold text-sm text-slate-300 shrink-0">
-          🛠️ Dev 2B Preview
-        </span>
-
-        {/* Template selector */}
-        <div className="flex items-center gap-1 bg-slate-800 rounded-xl p-1">
-          {TEMPLATES.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTemplate(t.id)}
-              className={[
-                'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150',
-                activeTemplate === t.id
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-400 hover:text-white',
-              ].join(' ')}
-              title={t.desc}
-            >
-              {t.label}
-            </button>
-          ))}
+    <div className="min-h-screen flex flex-col bg-slate-900 text-slate-100 font-sans antialiased selection:bg-amber-400 selection:text-amber-950">
+      {/* ============================================================
+          TOP HEADER BAR (Reference: image.png)
+          ============================================================ */}
+      <header className="h-14 bg-[#0f172a] border-b border-slate-800 px-4 lg:px-6 flex items-center justify-between shrink-0 z-30">
+        {/* Brand Left */}
+        <div className="flex items-center gap-2.5">
+          <span className="text-amber-400 text-lg leading-none select-none">✦</span>
+          <span className="font-extrabold text-white text-base tracking-tight">
+            UMKM Builder
+          </span>
         </div>
 
-        {/* Viewport toggle — US-02 */}
-        <div className="flex items-center gap-1 bg-slate-800 rounded-xl p-1 ml-auto sm:ml-0">
-          {VIEWPORTS.map((v) => (
-            <button
-              key={v.id}
-              onClick={() => setActiveViewport(v.id)}
-              className={[
-                'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150',
-                activeViewport === v.id
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-400 hover:text-white',
-              ].join(' ')}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Info badge */}
-        <div className="hidden sm:flex ml-auto items-center gap-2">
-          <span className="text-xs text-slate-500">Mock data aktif</span>
-          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-        </div>
-      </div>
-
-      {/* Preview area */}
-      <div className="flex-1 flex justify-center p-4 md:p-8 overflow-auto">
-        <div
-          className={[
-            'transition-all duration-300 ease-in-out bg-white shadow-2xl rounded-lg overflow-hidden',
-            activeViewport === 'mobile' ? 'ring-8 ring-slate-700 rounded-[2rem]' : 'w-full',
-          ].join(' ')}
-          style={{
-            width: currentViewport.width,
-            maxWidth: '100%',
-          }}
-        >
-          {/* Website renderer — same API Dev 2A will use */}
-          <div className={activeViewport === 'mobile' ? 'overflow-y-auto max-h-[85vh]' : ''}>
-            <WebsiteRenderer
-              templateId={activeTemplate}
-              data={currentData}
-              theme={activeTemplate.replace('template-', '')}
-            />
+        {/* Center / Right Toolbar */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Active Business Badge */}
+          <div className="hidden md:flex items-center gap-2 bg-slate-800/90 border border-slate-700/80 px-3 py-1 rounded-full text-xs">
+            <span className="text-slate-400 font-semibold tracking-wider text-[11px] uppercase">
+              AKTIF :
+            </span>
+            <span className="flex items-center gap-1.5 font-bold text-white uppercase tracking-wide">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              {websiteData?.meta?.businessName || 'WARUNG KOPI SEJAHTERA'}
+            </span>
           </div>
-        </div>
-      </div>
 
-      {/* Footer bar */}
-      <div className="bg-slate-900 text-slate-500 text-xs px-4 py-2 text-center shrink-0">
-        Dev 2B Output — Siap integrasi dengan Dev 2A via{' '}
-        <code className="text-slate-400">&lt;WebsiteRenderer templateId="..." data={'{...}'} /&gt;</code>
+          {/* Template Selector Pills */}
+          <div className="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+            {Object.values(TEMPLATE_META).map((t) => {
+              const isActive = activeTemplate === t.id
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => handleSelectTemplate(t.id)}
+                  className={[
+                    'px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition-all duration-150 flex items-center gap-1.5',
+                    isActive
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-700/50',
+                  ].join(' ')}
+                  title={t.name}
+                >
+                  <span>{t.label}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Download Website Button */}
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 text-white text-xs font-semibold px-3 sm:px-3.5 py-1.5 rounded-lg transition-all shadow-xs"
+            title="Download kode HTML website siap pakai"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Download Website</span>
+          </button>
+        </div>
+      </header>
+
+      {/* ============================================================
+          MAIN DUAL-PANEL WORKSPACE
+          ============================================================ */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-slate-100">
+        {/* ------------------------------------------------------------
+            LEFT PANEL: AI CHAT ASSISTANT & REVISIONS
+            ------------------------------------------------------------ */}
+        <aside className="w-full md:w-80 lg:w-96 bg-white border-r border-slate-200 flex flex-col shrink-0 h-[480px] md:h-[calc(100vh-56px)] shadow-xs">
+          {/* Assistant Header */}
+          <div className="px-4 py-3.5 border-b border-slate-100 bg-white shrink-0">
+            <div className="flex items-center justify-between text-[11px] mb-1">
+              <span className="font-mono font-semibold text-slate-400 tracking-wider">
+                AI STUDIO V1.0
+              </span>
+              <span className="font-medium text-slate-500 truncate max-w-[140px]">
+                {websiteData?.meta?.businessName || 'Warung Kopi Sejahtera'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
+                <span>Asisten Website</span>
+              </h2>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Aktif
+              </span>
+            </div>
+          </div>
+
+          {/* Chat Messages Body */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50">
+            {messages.map((msg) => {
+              if (msg.sender === 'user') {
+                return (
+                  <div key={msg.id} className="flex justify-end">
+                    <div className="bg-blue-600 text-white rounded-2xl rounded-br-sm px-3.5 py-2 text-xs sm:text-sm font-medium shadow-xs max-w-[85%] leading-relaxed">
+                      {msg.text}
+                    </div>
+                  </div>
+                )
+              }
+
+              // Assistant message
+              return (
+                <div key={msg.id} className="flex flex-col items-start gap-1 max-w-[95%]">
+                  <div className="bg-white border border-slate-200/80 rounded-2xl rounded-tl-sm p-3.5 shadow-xs text-xs sm:text-sm text-slate-700 space-y-2.5 leading-relaxed">
+                    <p>{msg.text}</p>
+
+                    {/* Onboarding steps visual progression */}
+                    {msg.steps && (
+                      <div className="pt-2 border-t border-slate-100 space-y-1.5 text-xs">
+                        <p className="font-medium text-slate-500 text-[11px]">
+                          Sedang memproses informasi:
+                        </p>
+                        <div className="space-y-1">
+                          {msg.steps.map((step, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center gap-2 text-slate-600"
+                            >
+                              {step.status === 'done' ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                              ) : step.status === 'in-progress' ? (
+                                <span className="w-3.5 h-3.5 flex items-center justify-center">
+                                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                                </span>
+                              ) : (
+                                <Circle className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                              )}
+                              <span
+                                className={
+                                  step.status === 'done'
+                                    ? 'text-slate-800 font-medium'
+                                    : step.status === 'in-progress'
+                                    ? 'text-blue-600 font-semibold'
+                                    : 'text-slate-400'
+                                }
+                              >
+                                {step.label}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+
+            {isTyping && (
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 pl-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce [animation-delay:0.2s]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce [animation-delay:0.4s]" />
+                <span className="ml-1 text-[11px]">Memproses perubahan...</span>
+              </div>
+            )}
+
+            <div ref={chatBottomRef} />
+          </div>
+
+          {/* Quick Options (Pilihan Cepat) */}
+          <div className="p-2.5 bg-white border-t border-slate-100 shrink-0">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-1">
+              Pilihan Cepat:
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => handleSendPrompt('Ubah warna utama jadi cokelat tua klasik.')}
+                className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200/80 hover:bg-amber-100 transition-colors"
+              >
+                ☕ Cokelat Klasik
+              </button>
+              <button
+                onClick={() => handleSendPrompt('Ganti headline jadi lebih menarik.')}
+                className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+              >
+                ✏️ Headline Baru
+              </button>
+              <button
+                onClick={() => handleSendPrompt('Tambahkan menu baru: Pisang Goreng Keju')}
+                className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+              >
+                ➕ Menu Baru
+              </button>
+              <button
+                onClick={() => handleSendPrompt('Ganti warna jadi warm amber')}
+                className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors"
+              >
+                🍯 Warm Amber
+              </button>
+            </div>
+          </div>
+
+          {/* Input Area */}
+          <div className="p-3 bg-white border-t border-slate-100 shrink-0">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleSendPrompt()
+              }}
+              className="relative bg-slate-50 border border-slate-200 rounded-xl p-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all"
+            >
+              <textarea
+                value={inputPrompt}
+                onChange={(e) => setInputPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSendPrompt()
+                  }
+                }}
+                rows={2}
+                placeholder="Minta perubahan pada website..."
+                className="w-full text-xs sm:text-sm text-slate-800 placeholder-slate-400 bg-transparent border-none focus:outline-none resize-none leading-relaxed"
+              />
+
+              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 mt-1">
+                <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                  <span className="text-amber-500">✦</span> Tekan Enter untuk kirim
+                </span>
+                <button
+                  type="submit"
+                  disabled={!inputPrompt.trim() || isTyping}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white p-1.5 rounded-lg transition-colors shadow-xs active:scale-95"
+                  title="Kirim revisi"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </form>
+          </div>
+        </aside>
+
+        {/* ------------------------------------------------------------
+            RIGHT PANEL: LIVE PREVIEW & CONTROLS
+            ------------------------------------------------------------ */}
+        <main className="flex-1 flex flex-col min-w-0 bg-slate-100">
+          {/* Sub-Header Toolbar (Viewport + Theme Palette Switcher) */}
+          <div className="h-12 bg-white border-b border-slate-200 px-4 lg:px-6 flex items-center justify-between shrink-0">
+            {/* Viewport Switcher */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200/80">
+              <button
+                onClick={() => setActiveViewport('desktop')}
+                className={[
+                  'px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5',
+                  activeViewport === 'desktop'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800',
+                ].join(' ')}
+              >
+                <Monitor className="w-3.5 h-3.5" />
+                <span>Desktop</span>
+              </button>
+              <button
+                onClick={() => setActiveViewport('mobile')}
+                className={[
+                  'px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5',
+                  activeViewport === 'mobile'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800',
+                ].join(' ')}
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Mobile</span>
+              </button>
+            </div>
+
+            {/* Theme Palette Switcher */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400">Tema :</span>
+              <div className="flex items-center gap-1.5">
+                {currentThemes.map((thm) => {
+                  const isActive = activeTheme === thm.id
+                  return (
+                    <button
+                      key={thm.id}
+                      onClick={() => handleThemeChange(thm.id)}
+                      className={[
+                        'px-2.5 py-1 rounded-full text-xs font-semibold transition-all border flex items-center gap-1.5',
+                        isActive
+                          ? 'bg-slate-900 text-white border-slate-900 shadow-xs ring-2 ring-slate-400/20'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
+                      ].join(' ')}
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: thm.primaryColor }}
+                      />
+                      <span className="hidden sm:inline">{thm.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Live Preview Canvas Stage */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-6 flex justify-center items-start">
+            <div
+              className={[
+                'transition-all duration-300 ease-in-out bg-white shadow-xl overflow-hidden',
+                activeViewport === 'mobile'
+                  ? 'w-[390px] rounded-[2.5rem] ring-8 ring-slate-800 shadow-2xl max-h-[82vh] overflow-y-auto my-auto'
+                  : 'w-full max-w-6xl rounded-xl border border-slate-200/80',
+              ].join(' ')}
+            >
+              {/* Actual Live Website Rendered Component */}
+              <WebsiteRenderer
+                templateId={activeTemplate}
+                data={websiteData}
+                theme={activeTheme}
+              />
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   )

@@ -30,7 +30,14 @@ const WhatsAppIcon = () => (
   </svg>
 )
 
-export default function Hero({ data = {}, contact = {}, className = '', theme = 'services' }) {
+export default function Hero({
+  data = {},
+  contact = {},
+  meta = {},
+  className = '',
+  style = {},
+  _theme = 'services',
+}) {
   const {
     title = 'Selamat Datang',
     subtitle = '',
@@ -38,6 +45,7 @@ export default function Hero({ data = {}, contact = {}, className = '', theme = 
     ctaWhatsappMessage = 'Halo, saya tertarik dengan layanan Anda',
   } = data
 
+  const tagline = meta.tagline || data.tagline || ''
   const { whatsappNumber = '' } = contact
 
   const waUrl = whatsappNumber
@@ -45,15 +53,21 @@ export default function Hero({ data = {}, contact = {}, className = '', theme = 
     : '#'
 
   return (
-    <div className={['relative overflow-hidden', className].join(' ')}>
+    <div className={['relative overflow-hidden', className].join(' ')} style={style}>
       <Container>
-        <div className="flex flex-col items-center text-center py-20 md:py-32 gap-6">
-          <h1 className="text-4xl md:text-6xl font-bold leading-tight max-w-4xl">
+        <div className="flex flex-col items-center text-center py-20 md:py-32 gap-6 relative z-10">
+          {tagline && (
+            <div className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase bg-white/15 backdrop-blur-md border border-white/20 text-white/95 shadow-sm">
+              {tagline}
+            </div>
+          )}
+
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight max-w-4xl tracking-tight text-white drop-shadow-sm">
             {title}
           </h1>
 
           {subtitle && (
-            <p className="text-lg md:text-xl max-w-2xl opacity-80 leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl max-w-2xl text-white/90 leading-relaxed font-normal">
               {subtitle}
             </p>
           )}
@@ -64,6 +78,7 @@ export default function Hero({ data = {}, contact = {}, className = '', theme = 
             size="lg"
             target="_blank"
             rel="noopener noreferrer"
+            className="shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all text-base font-bold py-3.5 px-7"
           >
             <WhatsAppIcon />
             {ctaText}
@@ -71,13 +86,13 @@ export default function Hero({ data = {}, contact = {}, className = '', theme = 
         </div>
       </Container>
 
-      {/* Decorative background blob */}
+      {/* Decorative background subtle glow */}
       <div
-        className="absolute inset-0 -z-10 overflow-hidden pointer-events-none"
+        className="absolute inset-0 -z-0 overflow-hidden pointer-events-none"
         aria-hidden="true"
       >
-        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-10 bg-current blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full opacity-10 bg-current blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-15 bg-white blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full opacity-15 bg-white blur-3xl" />
       </div>
     </div>
   )
