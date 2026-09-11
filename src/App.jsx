@@ -253,7 +253,7 @@ export default function App() {
   const currentThemes = currentMeta.themes
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-900 text-slate-100 font-sans antialiased selection:bg-amber-400 selection:text-amber-950">
+    <div className="h-screen overflow-hidden flex flex-col bg-slate-900 text-slate-100 font-sans antialiased selection:bg-amber-400 selection:text-amber-950">
       {/* ============================================================
           TOP HEADER BAR (Reference: image.png)
           ============================================================ */}
@@ -316,11 +316,11 @@ export default function App() {
       {/* ============================================================
           MAIN DUAL-PANEL WORKSPACE
           ============================================================ */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-slate-100">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-slate-100 h-[calc(100vh-56px)]">
         {/* ------------------------------------------------------------
             LEFT PANEL: AI CHAT ASSISTANT & REVISIONS
             ------------------------------------------------------------ */}
-        <aside className="w-full md:w-80 lg:w-96 bg-white border-r border-slate-200 flex flex-col shrink-0 h-[480px] md:h-[calc(100vh-56px)] shadow-xs">
+        <aside className="w-full md:w-80 lg:w-96 bg-white border-r border-slate-200 flex flex-col shrink-0 h-[50vh] md:h-full shadow-xs overflow-hidden">
           {/* Assistant Header */}
           <div className="px-4 py-3.5 border-b border-slate-100 bg-white shrink-0">
             <div className="flex items-center justify-between text-[11px] mb-1">
@@ -491,7 +491,7 @@ export default function App() {
         {/* ------------------------------------------------------------
             RIGHT PANEL: LIVE PREVIEW & CONTROLS
             ------------------------------------------------------------ */}
-        <main className="flex-1 flex flex-col min-w-0 bg-slate-100">
+        <main className="flex-1 flex flex-col min-w-0 bg-slate-100 overflow-hidden">
           {/* Sub-Header Toolbar (Viewport + Theme Palette Switcher) */}
           <div className="h-12 bg-white border-b border-slate-200 px-4 lg:px-6 flex items-center justify-between shrink-0">
             {/* Viewport Switcher */}
